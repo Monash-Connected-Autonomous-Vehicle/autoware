@@ -1,0 +1,24 @@
+repositories:
+  # Minimal source set for the RViz manual speed/steering controller panel.
+  # Import this file instead of autoware.repos when a demo only needs rviz2,
+  # the panel plugin, and the message packages it uses.
+  core/autoware_cmake:
+    type: git
+    url: https://github.com/autowarefoundation/autoware_cmake.git
+    version: main
+  core/autoware_msgs:
+    type: git
+    url: https://github.com/autowarefoundation/autoware_msgs.git
+    version: main
+  core/autoware_utils:
+    type: git
+    url: https://github.com/autowarefoundation/autoware_utils.git
+    version: main
+  universe/external/tier4_autoware_msgs:
+    type: git
+    url: https://github.com/tier4/tier4_autoware_msgs.git
+    version: tier4/universe
+  tools/autoware_tools:
+    type: git
+    url: https://github.com/autowarefoundation/autoware_tools.git
+    version: main

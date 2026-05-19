@@ -38,6 +38,72 @@ To learn more about using or developing Autoware, refer to the [Autoware documen
 
 If you wish to use Autoware.AI, the previous version of Autoware based on ROS 1, switch to [autoware-ai](https://github.com/autowarefoundation/autoware_ai) repository. However, be aware that Autoware.AI has reached the end-of-life as of 2022, and we strongly recommend transitioning to Autoware Core/Universe for future use.
 
+## Minimal RViz Manual Controller
+
+For speed and steering demos, Autoware's RViz manual controller can be built without importing the full Autoware workspace. Use `manual-controller.repos` to import only the RViz panel package and the message packages it needs.
+
+```bash
+sudo apt update
+sudo apt install python3-vcstool python3-rosdep python3-colcon-common-extensions ros-humble-rviz2
+sudo rosdep init 2>/dev/null || true
+rosdep update
+mkdir -p ~/manual_controller_ws/src
+cd ~/manual_controller_ws
+source /opt/ros/humble/setup.bash
+vcs import src < /path/to/autoware/manual-controller.repos
+rosdep install --from-paths \
+  src/core/autoware_cmake \
+  src/core/autoware_msgs/autoware_common_msgs \
+  src/core/autoware_msgs/autoware_control_msgs \
+  src/core/autoware_msgs/autoware_planning_msgs \
+  src/core/autoware_msgs/autoware_vehicle_msgs \
+  src/core/autoware_utils/autoware_utils_rclcpp \
+  src/universe/external/tier4_autoware_msgs/tier4_control_msgs \
+  src/universe/external/tier4_autoware_msgs/tier4_external_api_msgs \
+  src/tools/autoware_tools/common/tier4_control_rviz_plugin \
+  --ignore-src -r -y
+colcon build --symlink-install --packages-up-to tier4_control_rviz_plugin --cmake-args -DBUILD_TESTING=OFF
+source install/setup.bash
+rviz2
+```
+
+In RViz, open `Panels` -> `Add New Panel`, select `rviz_plugins/ManualController`, and press `OK`. To load it automatically from an RViz config, add this entry under `Panels`:
+
+```yaml
+- Class: rviz_plugins/ManualController
+  Name: ManualController
+```
+
+The panel publishes:
+
+- `/external/selected/control_cmd` (`autoware_control_msgs/msg/Control`)
+- `/external/selected/gear_cmd` (`autoware_vehicle_msgs/msg/GearCommand`)
+- `/control/gate_mode_cmd` (`tier4_control_msgs/msg/GateMode`) when `Enable Manual Control` is pressed
+
+It also reads status from `/control/current_gate_mode`, `/vehicle/status/velocity_status`, `/api/autoware/get/engage`, and `/vehicle/status/gear_status`. For a minimal demo without the full Autoware gate, publish these status topics yourself or leave the status labels as `INIT`; speed and steering commands are still published after setting a cruise velocity or steering angle.
+
+When using this with MCAV's `sd_vehicle_interface`, start RViz with a remap so the panel writes to the interface input:
+
+```bash
+rviz2 --ros-args -r /external/selected/control_cmd:=/control/command/control_cmd
+```
+
+If RViz is already running, relay the panel's selected control command instead:
+
+```bash
+sudo apt install ros-humble-topic-tools
+ros2 run topic_tools relay \
+  /external/selected/control_cmd \
+  /control/command/control_cmd
+```
+
+The manual panel computes acceleration from `/vehicle/status/velocity_status`. If no vehicle velocity publisher is running, provide a simple zero-speed status for bench tests:
+
+```bash
+ros2 topic pub /vehicle/status/velocity_status autoware_vehicle_msgs/msg/VelocityReport \
+  "{longitudinal_velocity: 0.0, lateral_velocity: 0.0, heading_rate: 0.0}" -r 10
+```
+
 ## Contributing
 
 - [There is no formal process to become a contributor](https://github.com/autowarefoundation/autoware-projects/wiki#contributors) - you can comment on any [existing issues](https://github.com/autowarefoundation/autoware.universe/issues) or make a pull request on any Autoware repository!
